@@ -38,7 +38,7 @@ The submitted notebook is the executed final-run version and contains all cell o
 | Total decisions | 57,545 |
 | Learning updates | 14,137 |
 | Elapsed time, including periodic demos | 235.26 seconds |
-| Hardware | CUDA GPU |
+| Hardware | NVIDIA T4 GPU using CUDA |
 | Environment | ALE/MsPacman-v5 |
 | Training seed | 42 |
 | Evaluation exploration | 0.05 |
@@ -46,6 +46,8 @@ The submitted notebook is the executed final-run version and contains all cell o
 | Evaluation time-limited games | 0 before / 0 after |
 
 Evidence: [`config.json`](results/config.json), [`training.csv`](results/training.csv), and [`training_summary.json`](results/training_summary.json).
+
+The final run was not interrupted. Episode 1 completed with no learning updates because the agent was still collecting the first 1,000 replay-buffer decisions required by the warm-up. Learning began during Episode 2, and the completed run ultimately performed 14,137 updates. The Episode 1 `mean_loss` entry is therefore `NaN` in [`training.csv`](results/training.csv), as no loss existed before the first update.
 
 ## Before-and-after evaluation
 
@@ -95,8 +97,8 @@ Checkpoint demo scores are recorded in [`demo_scores.json`](results/demo_scores.
 ## What the agent learned
 
 - **Observations:** Four consecutive processed game screens help the agent infer positions and movement. By looking at four consecutive frames at once, the network doesn't just see a static picture; it can track motion, telling which direction Ms. Pac-Man and the ghosts are actually moving.
-- **Actions:** The joystick moves represent the actions the AI can choose from at any given moment—moving up, down, left, or right. Every time the AI chooses a direction, it changes the game state and transitions to a new set of screens. The network estimates the long-term value of each available joystick move and normally chooses the highest-valued one. With 0.20 training exploration, about 20% of post-warm-up choices are random.
-- **Rewards:** The game points act as the reward and feedback system. Eating dots, energy pellets, or ghosts gives the AI a positive reward, while running into a ghost and losing a life incurs a negative penalty. The entire goal of the DQN is to figure out which joystick moves tend to lead to higher future scores.
+- **Actions:** Joystick commands are the actions the AI can choose: no movement, the four cardinal directions, and four diagonal directions. Every action changes the game state and leads to a new set of screens. The network estimates the long-term value of each of these nine commands and normally chooses the highest-valued one. With 0.20 training exploration, about 20% of post-warm-up choices are random.
+- **Rewards:** Changes in game points supply the reward and feedback. Eating dots, energizers, fruit, or ghosts produces positive game points. The notebook does not add a separate penalty for losing a life; it clips the game reward to the range from -1 to +1 when storing training experience. Evaluation scores use the original, unclipped game points. The DQN attempts to learn which joystick moves tend to lead to higher future rewards.
 
 The model is not explicitly told where to move. It learns associations between visual situations, joystick actions, and later game points from repeated experience.
 
@@ -107,6 +109,8 @@ After training, the mean increased by 254 points, from 492 to 746, and every fix
 ## Hyperparameter tuning observations
 
 I changed only exploration, episodes, and learning rate. Runs 1–10 broadly tested more exploration, longer and shorter training, and larger and smaller learning rates. Some early runs changed multiple values, so they located promising settings but did not isolate individual effects. After Run 10 became the leader, Runs 11–15 changed one value at a time around it: exploration to 0.18 or 0.22, episodes to 125, or learning rate to 0.000015 or 0.0000075. None performed better.
+
+The table below is a manual summary of those tuning trials. To keep the submission compact, the repository contains the complete detailed artifacts for the selected final run, Run 10, rather than the full result folders for all 15 trials.
 
 | Run | Exploration | Episodes | Learning rate | Trained mean | Change from baseline |
 |---:|---:|---:|---:|---:|---:|
@@ -144,9 +148,10 @@ For the next experiment, I would change **only episodes from 100 to 110**, keepi
 
 - [Executed notebook](pacman_dqn.ipynb)
 - [Configuration and software/hardware record](results/config.json)
+- [Untrained baseline evaluation](results/baseline.json)
 - [Complete before/after evaluation](results/comparison.json)
 - [Episode-level training log](results/training.csv)
 - [Training summary](results/training_summary.json)
 - [Checkpoint demo scores](results/demo_scores.json)
 
-Large `.pt` model checkpoints are intentionally not committed to this repository. They remain preserved in the complete local Run 10 results ZIP and can alternatively be uploaded to a GitHub Release.
+Large `.pt` model checkpoints are intentionally not committed to this repository. They remain preserved in the complete local Run 10 results ZIP and can alternatively be uploaded to a GitHub Release. The saved checkpoint supports playback and evaluation, but it does not preserve the optimizer or replay buffer required to resume the exact training state.
